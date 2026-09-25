@@ -122,13 +122,6 @@ function getTargetWeeksForAttendance() {
     return [parseInt(active, 10)];
   }
 
-  if (active.startsWith('unit_')) {
-    const unitId = active.replace('unit_', '');
-    const unit = ACADEMIC_UNITS.find(u => u.id === unitId);
-    if (!unit) return [];
-    return unit.items.filter(it => it.type === 'regular').map(it => parseInt(it.week, 10));
-  }
-
   if (active === 'consolidado') {
     return REGULAR_WEEKS;
   }
