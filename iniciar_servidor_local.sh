@@ -6,8 +6,8 @@ cd "$DIR"
 
 if [ -f "$DIR/.venv/bin/uvicorn" ]; then
   UVICORN_EXEC="$DIR/.venv/bin/uvicorn"
-elif [ -f "/home/lawrenrp/Escritorio/Laboratorio_EWS/.venv/bin/uvicorn" ]; then
-  UVICORN_EXEC="/home/lawrenrp/Escritorio/Laboratorio_EWS/.venv/bin/uvicorn"
+elif [ -f "$DIR/../Laboratorio_EWS/.venv/bin/uvicorn" ]; then
+  UVICORN_EXEC="$DIR/../Laboratorio_EWS/.venv/bin/uvicorn"
 else
   UVICORN_EXEC="uvicorn"
 fi

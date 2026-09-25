@@ -58,7 +58,7 @@ Separar el servidor de aplicaciones de la base de datos:
 Abre tu terminal dentro de la carpeta `EWS_Produccion`:
 
 ```bash
-cd /home/lawrenrp/Escritorio/EWS_Produccion
+cd EWS_Produccion
 
 # Inicializar Git
 git init
