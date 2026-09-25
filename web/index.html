@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UTP+class // Sistema de Alerta Temprana</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              red: '#CC142E',
+              redHover: '#B50D30',
+              teal: '#00A88E',
+              navy: '#000F37',
+              dark: '#161616',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-[#CC142E] selection:text-white">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap min-w-0">
+      
+      <div class="flex items-center shrink-0">
+        <img src="assets/utp-class-logo.svg" alt="UTP+class" class="h-4.5 sm:h-5 w-auto">
+      </div>
+
+      <nav id="stepper-nav" class="hidden inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 text-xs font-medium shrink min-w-0 overflow-x-auto">
+        <button id="nav-step-1" class="step-nav-btn active px-2 sm:px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-2xs transition inline-flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <span class="material-symbols-outlined text-[15px]">group</span>
+          <span class="hidden md:inline">1. Lista de Alumnos</span>
+          <span class="inline md:hidden">1. Alumnos</span>
+        </button>
+        <button id="nav-step-2" class="step-nav-btn px-2 sm:px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition inline-flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <span class="material-symbols-outlined text-[15px]">edit_calendar</span>
+          <span class="hidden md:inline">2. Calificaciones Semanales</span>
+          <span class="inline md:hidden">2. Notas</span>
+        </button>
+        <button id="nav-step-3" class="step-nav-btn px-2 sm:px-3 py-1 rounded-md text-slate-500 hover:text-slate-900 transition inline-flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <span class="material-symbols-outlined text-[15px]">insights</span>
+          <span class="hidden md:inline">3. Alertas y Diagnóstico</span>
+          <span class="inline md:hidden">3. Alertas</span>
+        </button>
+      </nav>
+
+      <div id="auth-header-container" class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button id="btn-open-login" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5 shadow-2xs shrink-0">
+          <span class="material-symbols-outlined text-[16px] text-[#CC142E]">account_circle</span>
+          <span class="hidden sm:inline">Iniciar Sesión</span>
+          <span class="inline sm:hidden">Ingresar</span>
+        </button>
+
+        <div id="user-logged-box" class="hidden flex items-center gap-1 sm:gap-2 shrink-0">
+          <button id="btn-open-profile" class="text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5 shadow-2xs shrink-0" title="Ver mi perfil docente">
+            <span class="w-6 h-6 rounded-full bg-[#CC142E]/10 text-[#CC142E] flex items-center justify-center font-bold text-[10px] shrink-0" id="user-avatar-initials">P</span>
+            <span class="max-w-[70px] sm:max-w-[120px] md:max-w-[150px] truncate" id="user-display-name">Profesor</span>
+          </button>
+          <button id="btn-logout" class="text-xs p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition shrink-0" title="Cerrar Sesión">
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
+
+    <section id="view-auth-gate" class="max-w-md mx-auto my-6 sm:my-10 space-y-4">
+      <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
+        
+        <div class="text-center space-y-2">
+          <div class="inline-flex items-center justify-center p-3 bg-red-50 rounded-2xl text-[#CC142E] mb-1">
+            <span class="material-symbols-outlined text-3xl">school</span>
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">Portal Docente UTP+class</h2>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Sistema de Alerta Temprana para el monitoreo y prevención del riesgo académico de tus estudiantes.
+          </p>
+        </div>
+
+        <div class="flex p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+          <button id="gate-tab-login" type="button" class="flex-1 py-2 text-center rounded-lg bg-white text-slate-900 shadow-2xs transition">
+            Iniciar Sesión
+          </button>
+          <button id="gate-tab-register" type="button" class="flex-1 py-2 text-center rounded-lg text-slate-500 hover:text-slate-900 transition">
+            Crear Cuenta
+          </button>
+        </div>
+
+        <form id="gate-form-login" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Correo Electrónico:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">mail</span>
+              <input type="email" id="gate-login-email" required placeholder="profesor@utp.edu.pe" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-[#CC142E] transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Contraseña:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">lock</span>
+              <input type="password" id="gate-login-password" required placeholder="••••••••" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-[#CC142E] transition">
+            </div>
+          </div>
+
+          <button type="submit" id="gate-btn-submit-login" class="w-full py-2.5 px-4 text-xs font-bold rounded-lg bg-[#CC142E] hover:bg-[#B50D30] text-white shadow-sm transition inline-flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[17px]">login</span>
+            <span>Ingresar al Sistema</span>
+          </button>
+        </form>
+
+        <form id="gate-form-register" class="space-y-3.5 text-xs hidden">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Nombre Completo y Título:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">badge</span>
+              <input type="text" id="gate-reg-nombre" required placeholder="Ej: Mg. Carlos Mendoza" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-[#00A88E] transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Correo Institucional / Personal:</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">mail</span>
+              <input type="email" id="gate-reg-email" required placeholder="carlos.mendoza@utp.edu.pe" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-[#00A88E] transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Contraseña (mínimo 6 caracteres):</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">key</span>
+              <input type="password" id="gate-reg-password" required minlength="6" placeholder="••••••••" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:border-[#00A88E] transition">
+            </div>
+          </div>
+
+          <button type="submit" id="gate-btn-submit-register" class="w-full py-2.5 px-4 text-xs font-bold rounded-lg bg-[#00A88E] hover:bg-[#008f79] text-white shadow-sm transition inline-flex items-center justify-center gap-1.5 cursor-pointer mt-2">
+            <span class="material-symbols-outlined text-[17px]">person_add</span>
+            <span>Registrar Cuenta y Entrar</span>
+          </button>
+        </form>
+
+        <div class="border-t border-slate-100 pt-3 text-center text-[11px] text-slate-400">
+          <span>Acceso institucional protegido mediante cifrado seguro JWT</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-initial-course" class="max-w-lg mx-auto my-8 space-y-4 hidden">
+      <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <div class="text-center space-y-1.5 border-b border-slate-100 pb-4">
+          <div class="w-10 h-10 mx-auto rounded-lg bg-red-50 text-[#CC142E] flex items-center justify-center font-bold">
+            <span class="material-symbols-outlined text-2xl">school</span>
+          </div>
+          <h2 class="text-base font-bold text-slate-900">¡Bienvenido(a), <span id="init-docente-name">Docente</span>!</h2>
+          <p class="text-xs text-slate-500">Para comenzar a gestionar a tus estudiantes y evaluar el riesgo académico, crea tu primera sección o asignatura.</p>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Nombre del Curso:</label>
+            <input type="text" id="init-course-name" placeholder="Ej: Matemática, Comunicación, Algoritmos, Calidad..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Código de Sección o Aula (NRC):</label>
+            <input type="text" id="init-course-section" placeholder="Ej: 37651, Aula 204, Grupo A..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+            <p class="text-[10px] text-slate-400 mt-1">Identifica a tu grupo para no confundirlo con otros salones.</p>
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">¿Cuántas clases tienes por semana?:</label>
+            <select id="init-course-sessions" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+              <option value="2">2 clases por semana (Teoría y Práctica)</option>
+              <option value="1">1 clase por semana</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button id="btn-init-create-course" class="w-full py-2.5 px-4 text-xs font-bold rounded-md bg-[#CC142E] hover:bg-[#B50D30] text-white shadow-sm transition inline-flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>Guardar Curso y Comenzar a Gestionar</span>
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div id="course-bar" class="hidden bg-white rounded-lg p-3 border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center space-x-1.5 font-semibold text-slate-700">
+          <span class="material-symbols-outlined text-[18px] text-slate-600">school</span>
+          <span>Curso & Sección:</span>
+        </div>
+        
+        <select id="select-course-dropdown" class="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-slate-400 cursor-pointer">
+          </select>
+
+        <span class="inline-flex items-center space-x-1 font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+          <span>Sección:</span>
+          <strong id="badge-current-section" class="text-[#CC142E] font-bold">-</strong>
+        </span>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button id="btn-open-modal-course" class="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded text-xs transition">
+          <span class="material-symbols-outlined text-sm">add</span>
+          <span>Nuevo Curso / Sección</span>
+        </button>
+        <button id="btn-delete-course" class="p-1.5 text-slate-400 hover:text-[#CC142E] transition rounded border border-transparent hover:border-slate-200" title="Eliminar este curso">
+          <span class="material-symbols-outlined text-sm">delete</span>
+        </button>
+      </div>
+    </div>
+
+    <section id="view-crud" class="space-y-4 hidden">
+      
+      <div class="bg-white rounded-lg p-3 sm:p-4 border border-slate-200 shadow-2xs space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div>
+            <h1 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-700">group</span>
+              <span>Lista de Alumnos — <span id="label-course-active-title" class="text-[#CC142E]">-</span></span>
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5">Agrega a tus alumnos uno por uno o arrastra tu archivo Excel.</p>
+          </div>
+
+          <div class="flex items-center space-x-1.5">
+            <button id="btn-download-empty-template" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-2xs" title="Descargar plantilla de Excel">
+              <span class="material-symbols-outlined text-[16px] text-emerald-600">table_view</span>
+              <span>Plantilla Excel</span>
+            </button>
+            </div>
+        </div>
+
+        <div id="dropzone-excel-import" class="border border-dashed border-slate-300 hover:border-[#CC142E] bg-slate-50/70 hover:bg-red-50/20 rounded-md px-3.5 py-2 cursor-pointer transition flex items-center justify-between gap-2 text-xs">
+          <input type="file" id="file-input-excel" accept=".xlsx, .xls, .csv" class="hidden">
+          <div class="flex items-center space-x-2 text-slate-700">
+            <span class="material-symbols-outlined text-xl text-slate-500">upload_file</span>
+            <span class="font-medium">Arrastra tu archivo Excel aquí o <span class="text-[#CC142E] underline font-semibold">selecciónalo</span></span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono hidden sm:inline uppercase">.xlsx / .csv</span>
+        </div>
+
+        <div class="pt-2.5 border-t border-slate-100 space-y-2">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs">
+            <div class="w-full sm:w-44">
+              <input type="text" id="input-new-code" placeholder="Código (ej. U202114501)" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded font-mono text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+            </div>
+            <div class="w-full sm:flex-1">
+              <input type="text" id="input-new-name" placeholder="Apellidos y Nombres" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+            </div>
+            <button id="btn-add-student" class="inline-flex items-center justify-center gap-1 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded text-xs transition whitespace-nowrap">
+              <span class="material-symbols-outlined text-sm">person_add</span>
+              <span>Agregar Alumno</span>
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-0.5">
+            <div class="flex items-center space-x-2">
+              <span>Filas en blanco:</span>
+              <input type="number" id="input-batch-count" value="5" min="1" max="100" class="w-12 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded font-mono text-center text-xs">
+              <button id="btn-create-batch" class="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded transition">
+                <span class="material-symbols-outlined text-xs">playlist_add</span>
+                <span>Generar</span>
+              </button>
+            </div>
+
+            <button id="btn-clear-all-students" class="inline-flex items-center gap-1 text-slate-400 hover:text-[#CC142E] text-[11px] transition">
+              <span class="material-symbols-outlined text-xs">delete_sweep</span>
+              <span>Limpiar lista</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="overflow-x-auto max-h-[480px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10">
+              <tr>
+                <th class="px-3 py-2.5 w-12 text-center">#</th>
+                <th class="px-3 py-2.5 w-44">Código</th>
+                <th class="px-3 py-2.5">Apellidos y Nombres</th>
+                <th class="px-3 py-2.5 w-20 text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="crud-table-body" class="divide-y divide-slate-100 font-sans">
+              </tbody>
+          </table>
+        </div>
+
+        <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+          <span>Estudiantes en lista: <strong id="crud-total-count" class="font-mono text-slate-900">0</strong></span>
+          <div id="crud-pagination-container" class="flex items-center space-x-1.5"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <button id="btn-export-students-excel" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-2xs">
+          <span class="material-symbols-outlined text-[16px] text-emerald-600">file_download</span>
+          <span>Descargar Lista (.xlsx)</span>
+        </button>
+
+        <button id="btn-goto-step-2" class="inline-flex items-center space-x-2 px-4 py-2 text-xs font-bold rounded-md bg-[#CC142E] hover:bg-[#B50D30] text-white shadow-sm transition transform active:scale-95">
+          <span>Pasar a Calificaciones</span>
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="view-grades" class="space-y-4 hidden">
+      
+      <div class="bg-white rounded-lg p-3 sm:p-3.5 border border-slate-200 shadow-2xs space-y-2.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[18px] text-slate-700">edit_calendar</span>
+              <span>Calificaciones — <span id="label-grades-course-title" class="text-[#CC142E]">-</span></span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Asistencia y notas de tareas semana a semana (0 a 20).</p>
+          </div>
+
+          <div class="flex items-center space-x-1.5">
+            <button id="btn-back-to-step-1" class="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition">
+              <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+              <span>Lista de Alumnos</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex flex-col space-y-2 text-xs">
+          
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <div class="inline-flex items-center space-x-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                <span class="text-slate-500">Clases:</span>
+                <span id="badge-course-sessions" class="font-semibold text-slate-800">-</span>
+              </div>
+
+              <label id="lbl-eval-tareas" class="inline-flex items-center space-x-1.5 cursor-pointer text-slate-700 select-none text-[11px] px-1.5 py-0.5 rounded hover:bg-slate-100 transition" title="Tareas Semanales">
+                <input type="checkbox" id="chk-eval-tareas" checked class="rounded border-slate-300 text-[#CC142E] focus:ring-0">
+                <span>Tareas Semanales</span>
+              </label>
+
+              <label id="lbl-eval-participacion" class="inline-flex items-center space-x-1.5 cursor-pointer text-slate-700 select-none text-[11px] px-1.5 py-0.5 rounded hover:bg-slate-100 transition" title="Participación / Foros">
+                <input type="checkbox" id="chk-eval-participacion" checked class="rounded border-slate-300 text-[#CC142E] focus:ring-0">
+                <span>Participación / Foros</span>
+              </label>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <button id="btn-fill-attendance-all" class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded font-medium text-[11px] transition shadow-2xs cursor-pointer" title="Marcar asistencia completa a todos en esta semana">
+                <span class="material-symbols-outlined text-xs text-emerald-600">done_all</span>
+                <span>Todos Presentes</span>
+              </button>
+              <button id="btn-auto-calc-pa-toolbar" class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded font-medium text-[11px] transition shadow-2xs cursor-pointer" title="Calcular notas de PA (Semana 17) automáticamente para todos los alumnos en base a sus tareas continuas">
+                <span class="material-symbols-outlined text-xs text-amber-700">auto_fix_high</span>
+                <span>Auto-calcular PA (S17)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+            <div class="flex items-center space-x-1.5 overflow-x-auto">
+              <span class="text-slate-400 font-semibold text-[11px] whitespace-nowrap">Unidad:</span>
+              <div class="inline-flex rounded p-0.5 bg-white border border-slate-200" id="unit-selector-group">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-1 overflow-x-auto" id="week-subtabs-group">
+              </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="overflow-x-auto max-h-[480px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10" id="grades-table-header">
+              </thead>
+            <tbody id="grades-table-body" class="divide-y divide-slate-100 font-sans">
+              </tbody>
+          </table>
+        </div>
+
+        <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+          <div>
+            <span>Estudiantes evaluados: <strong id="grades-total-count" class="font-mono text-slate-900">0</strong></span>
+            <span class="text-[11px] text-slate-400 ml-2">Notas de 0.00 a 20.00 · Aprobatoria: ≥ 12.00</span>
+          </div>
+          <div id="grades-pagination-container" class="flex items-center space-x-1.5"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-back-to-step-1-bottom" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-2xs">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+            <span>Volver a Lista</span>
+          </button>
+          <button id="btn-export-full-excel" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-2xs">
+            <span class="material-symbols-outlined text-[16px] text-emerald-600">file_download</span>
+            <span>Descargar Registro (.xlsx)</span>
+          </button>
+        </div>
+
+        <button id="btn-goto-step-3" class="inline-flex items-center space-x-2 px-4 py-2 text-xs font-bold rounded-md bg-[#CC142E] hover:bg-[#B50D30] text-white shadow-sm transition transform active:scale-95">
+          <span>Ver Alertas y Diagnóstico</span>
+          <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </div>
+
+    </section>
+
+    <section id="view-dashboard" class="space-y-4 hidden">
+      
+      <div id="phase-banner" class="bg-white border-l-4 border-slate-900 rounded-r-lg p-3.5 border-y border-r border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <div>
+          <div class="text-[10px] uppercase font-mono font-semibold text-slate-500 tracking-wider" id="phase-tag">Fase Académica</div>
+          <div class="font-semibold text-slate-900" id="phase-description">Cargando diagnóstico...</div>
+        </div>
+        <div class="text-slate-600" id="phase-action-summary">
+          Proyección de riesgo hacia la siguiente evaluación sumativa.
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white p-4 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500" id="kpi-label-total">Total de Estudiantes</span>
+          <div class="text-2xl font-semibold text-slate-900 tracking-tight mt-1" id="kpi-total-students">0</div>
+          <span class="text-[10px] text-slate-400" id="kpi-sub-total">En tu salón de clase</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-slate-500" id="kpi-label-col2">Asistencia del Salón</span>
+          <div class="text-2xl font-semibold text-slate-900 tracking-tight mt-1" id="kpi-avg-attendance">0%</div>
+          <span class="text-[10px] text-[#00A88E] font-medium" id="kpi-sub-col2">Promedio acumulado</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-[#CC142E]" id="kpi-label-col3">En Peligro (Rojo)</span>
+          <div class="text-2xl font-semibold text-[#CC142E] tracking-tight mt-1" id="kpi-red-alerts">0</div>
+          <span class="text-[10px] text-slate-400" id="kpi-sub-col3">Riesgo alto de jalar</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border border-slate-200">
+          <span class="text-[11px] font-medium text-amber-700" id="kpi-label-col4">Por Límite de Faltas (DPI)</span>
+          <div class="text-2xl font-semibold text-amber-700 tracking-tight mt-1" id="kpi-dpi-risk">0</div>
+          <span class="text-[10px] text-slate-400" id="kpi-sub-col4">30% o más de inasistencias</span>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
+        
+        <div class="p-2.5 sm:p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div class="flex items-center space-x-1 overflow-x-auto" id="carousel-tabs-group">
+            <button data-slide="0" id="tab-carousel-0" class="carousel-tab-btn active px-2.5 py-1 rounded text-xs font-semibold bg-white text-slate-900 border border-slate-200 shadow-2xs transition whitespace-nowrap inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-[#CC142E]">donut_large</span>
+              <span id="tab-label-0">1. Semáforo del Salón</span>
+            </button>
+            <button data-slide="1" id="tab-carousel-1" class="carousel-tab-btn px-2.5 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900 transition whitespace-nowrap inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-blue-600">scatter_plot</span>
+              <span id="tab-label-1">2. Asistencia vs Tareas</span>
+            </button>
+            <button data-slide="2" id="tab-carousel-2" class="carousel-tab-btn px-2.5 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900 transition whitespace-nowrap inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-indigo-600">analytics</span>
+              <span id="tab-label-2">3. Problema Principal</span>
+            </button>
+            <button data-slide="3" id="tab-carousel-3" class="carousel-tab-btn px-2.5 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900 transition whitespace-nowrap inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[15px] text-emerald-600">bar_chart</span>
+              <span id="tab-label-3">4. Notas (0 a 20)</span>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between md:justify-end space-x-2 text-xs">
+            <span class="text-slate-400 font-mono text-[11px]" id="carousel-slide-counter">Análisis 1 de 4</span>
+            <div class="flex items-center space-x-1">
+              <button id="btn-carousel-prev" class="p-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded font-medium text-xs transition shadow-2xs inline-flex items-center justify-center" title="Análisis anterior">
+                <span class="material-symbols-outlined text-base leading-none">chevron_left</span>
+              </button>
+              <button id="btn-carousel-next" class="p-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded font-medium text-xs transition shadow-2xs inline-flex items-center justify-center" title="Siguiente análisis">
+                <span class="material-symbols-outlined text-base leading-none">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3.5 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          
+          <div class="lg:col-span-7 flex flex-col justify-between h-64 relative bg-slate-50/40 rounded-lg p-3 border border-slate-100">
+            
+            <div id="slide-chart-0" class="carousel-chart-slide w-full h-full flex flex-col justify-between">
+              <div class="flex items-center justify-between pb-1">
+                <span class="text-xs font-bold text-slate-800">Semáforo de tu Salón</span>
+                <span class="text-[10px] text-slate-400">¿Quiénes necesitan apoyo?</span>
+              </div>
+              <div class="relative w-full h-44 my-auto flex items-center justify-center">
+                <canvas id="chart-risk-donut"></canvas>
+              </div>
+              <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-100 text-[11px] text-center font-mono">
+                <div class="text-[#00A88E]">Al Día: <strong id="donut-green-pct">0%</strong></div>
+                <div class="text-amber-600">Atención: <strong id="donut-yellow-pct">0%</strong></div>
+                <div class="text-[#CC142E]">Peligro: <strong id="donut-red-pct">0%</strong></div>
+              </div>
+            </div>
+
+            <div id="slide-chart-1" class="carousel-chart-slide w-full h-full flex flex-col justify-between hidden">
+              <div class="flex items-center justify-between pb-1">
+                <span class="text-xs font-bold text-slate-800" id="scatter-header-title">¿Quiénes asisten y quiénes aprueban?</span>
+                <span class="text-[10px] font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">Nota mínima: 12.0</span>
+              </div>
+              <div class="relative w-full h-48 my-auto">
+                <canvas id="chart-scatter-attendance"></canvas>
+              </div>
+              <div class="text-[10px] text-slate-400 text-center font-mono pt-1 border-t border-slate-100" id="scatter-sub-footer">
+                Eje horizontal: % de Asistencia · Eje vertical: Nota en Tareas (0 a 20)
+              </div>
+            </div>
+
+            <div id="slide-chart-2" class="carousel-chart-slide w-full h-full flex flex-col justify-between hidden">
+              <div class="flex items-center justify-between pb-1">
+                <span class="text-xs font-bold text-slate-800">Problema Principal del Salón</span>
+                <span class="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.2 rounded font-bold">Causa #1</span>
+              </div>
+              <div class="relative w-full h-48 my-auto">
+                <canvas id="chart-pareto-risk"></canvas>
+              </div>
+              <div class="text-[10px] text-slate-400 text-center font-mono pt-1 border-t border-slate-100">
+                Muestra en orden qué dificultades provocan más riesgo en tu salón
+              </div>
+            </div>
+
+            <div id="slide-chart-3" class="carousel-chart-slide w-full h-full flex flex-col justify-between hidden">
+              <div class="flex items-center justify-between pb-1">
+                <span class="text-xs font-bold text-slate-800" id="hist-header-title">¿Cómo van las notas de tu salón? (0 a 20)</span>
+                <div class="flex items-center space-x-1.5 text-[10px] font-mono">
+                  <span class="text-[#CC142E] bg-red-50 px-1.5 py-0.2 rounded border border-red-200 font-bold" id="badge-disapproved-count">Desaprobados: 0</span>
+                  <span class="text-[#00A88E] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 font-bold" id="badge-approved-count">Aprobados: 0</span>
+                </div>
+              </div>
+              <div class="relative w-full h-48 my-auto">
+                <canvas id="chart-grade-histogram"></canvas>
+              </div>
+              <div class="text-[10px] text-slate-400 text-center font-mono pt-1 border-t border-slate-100" id="hist-sub-footer">
+                Menos de 12.0: En riesgo de jalar · 12.0 a 20.0: Aprobados
+              </div>
+            </div>
+
+          </div>
+
+          <div class="lg:col-span-5 bg-slate-50/90 rounded-lg p-3.5 border border-slate-200 text-xs space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
+              <span class="font-bold text-slate-900 flex items-center gap-1.5" id="carousel-guide-title">
+                <span class="material-symbols-outlined text-base text-amber-500">lightbulb</span>
+                <span>Guía para el Profesor</span>
+              </span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-[#CC142E] font-bold" id="carousel-guide-badge">
+                Consejo
+              </span>
+            </div>
+
+            <div class="space-y-1.5 text-slate-600 leading-relaxed text-[11px]" id="carousel-guide-description">
+              Cargando sugerencia para el docente...
+            </div>
+
+            <div class="bg-white rounded-md p-2.5 border border-slate-200 space-y-1">
+              <div class="text-[10px] font-bold uppercase text-slate-700 tracking-wider flex items-center gap-1">
+                <span class="material-symbols-outlined text-xs text-[#CC142E]">flag</span>
+                <span>¿Qué puedes hacer en clase?:</span>
+              </div>
+              <p class="text-[11px] text-slate-600 leading-normal" id="carousel-guide-action">
+                Cargando recomendación docente...
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-2xs">
+        
+        <div class="p-3.5 sm:px-4 sm:py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-xs font-semibold text-slate-900" id="dashboard-table-title">Diagnóstico individual: ¿Qué le pasa a cada alumno y qué hacer?</h3>
+            <p class="text-[11px] text-slate-400" id="dashboard-table-subtitle">Pasa el ratón sobre los códigos para ver la recomendación para cada estudiante</p>
+          </div>
+
+          <div class="inline-flex items-center space-x-1.5 text-xs bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg self-start sm:self-auto">
+            <span class="material-symbols-outlined text-[15px] text-slate-400">calendar_month</span>
+            <span class="text-slate-500 font-medium whitespace-nowrap">Semana de corte:</span>
+            <select id="select-cutoff-week" class="bg-transparent font-semibold text-slate-800 text-xs focus:outline-none cursor-pointer">
+              <option value="4" selected>Semana 4 (Alerta Temprana — Antes de la PC1)</option>
+              <option value="9">Semana 9 (Mitad de curso — Antes de la PC2)</option>
+              <option value="14">Semana 14 (Recta final — Antes de la PC3)</option>
+              <option value="16">Semana 16 (Proyección Final — Cierre de Tareas)</option>
+              <option value="18">Semana 18 (Notas Finales del Semestre)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="px-3.5 sm:px-4 py-2 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="flex items-center space-x-1.5 overflow-x-auto text-[11px] pb-1 sm:pb-0">
+            <button data-filter="all" class="filter-btn active px-2.5 py-1 rounded-md font-medium bg-slate-900 text-white transition">Todos (<span id="count-filter-all">0</span>)</button>
+            <button data-filter="red" class="filter-btn px-2.5 py-1 rounded-md font-medium text-[#CC142E] bg-white border border-slate-200 hover:bg-slate-50 transition"><span id="label-filter-red">Peligro</span> (<span id="count-filter-red">0</span>)</button>
+            <button data-filter="dpi" class="filter-btn px-2.5 py-1 rounded-md font-medium text-amber-700 bg-white border border-slate-200 hover:bg-slate-50 transition"><span id="label-filter-dpi">Por Faltas DPI</span> (<span id="count-filter-dpi">0</span>)</button>
+            <button data-filter="yellow" class="filter-btn px-2.5 py-1 rounded-md font-medium text-amber-600 bg-white border border-slate-200 hover:bg-slate-50 transition"><span id="label-filter-yellow">Atención</span> (<span id="count-filter-yellow">0</span>)</button>
+            <button data-filter="green" class="filter-btn px-2.5 py-1 rounded-md font-medium text-[#00A88E] bg-white border border-slate-200 hover:bg-slate-50 transition"><span id="label-filter-green">Al Día</span> (<span id="count-filter-green">0</span>)</button>
+          </div>
+
+          <div class="relative sm:w-60 w-full">
+            <span class="material-symbols-outlined text-[16px] text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">search</span>
+            <input type="text" id="dashboard-search" placeholder="Buscar por nombre o código..." class="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 shadow-2xs transition font-sans">
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead id="dashboard-table-head" class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="px-3.5 py-2.5">Código</th>
+                <th class="px-3.5 py-2.5">Estudiante</th>
+                <th class="px-3.5 py-2.5 text-center">Asistencia</th>
+                <th class="px-3.5 py-2.5 text-center">Tareas</th>
+                <th class="px-3.5 py-2.5 text-center" id="th-participacion-dash">Foros</th>
+                <th class="px-3.5 py-2.5 text-center">Exámenes</th>
+                <th class="px-3.5 py-2.5 text-center" id="th-col-risk">Riesgo</th>
+                <th class="px-3.5 py-2.5 text-center" id="th-col-status">Estado</th>
+                <th class="px-3.5 py-2.5 text-center whitespace-nowrap" id="th-col-cause" title="Causa del riesgo detectado">¿Qué le pasa?</th>
+                <th class="px-3.5 py-2.5 text-center whitespace-nowrap" id="th-col-action" title="Acción recomendada para el docente">¿Qué hacer?</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-table-body" class="divide-y divide-slate-100 font-sans">
+              </tbody>
+          </table>
+        </div>
+
+        <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
+          <span id="dashboard-pagination-label">Mostrando alumnos</span>
+          <div id="dashboard-pagination-container" class="flex items-center space-x-1.5"></div>
+        </div>
+
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+        <button id="btn-back-to-step-2" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-2xs">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span>Volver a Calificaciones</span>
+        </button>
+
+        <button id="btn-export-diagnostics-excel" class="inline-flex items-center space-x-2 px-4 py-2 text-xs font-bold rounded-md bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition transform active:scale-95">
+          <span class="material-symbols-outlined text-[16px] text-emerald-400">file_download</span>
+          <span>Exportar Diagnósticos (.xlsx)</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <div id="modal-new-course" class="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md p-5 space-y-4 mx-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-lg text-[#CC142E]">school</span>
+          <span>Agregar Nuevo Curso</span>
+        </h3>
+        <button id="btn-close-modal-course" class="text-slate-400 hover:text-slate-700 p-0.5 leading-none transition" title="Cerrar">
+          <span class="material-symbols-outlined text-base leading-none">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nombre del Curso:</label>
+          <input type="text" id="input-course-name" placeholder="Ej: Matemática, Comunicación, Algoritmos..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Código de Sección o Aula:</label>
+          <input type="text" id="input-course-section" placeholder="Ej: 37651, Aula 204, Grupo A..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded font-mono text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+          <p class="text-[10px] text-slate-400 mt-1">Identifica a tu grupo para no confundirlo con otros salones.</p>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">¿Cuántas clases tienes por semana?:</label>
+          <select id="input-course-sessions" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+            <option value="2">2 clases por semana (Teoría y Práctica)</option>
+            <option value="1">1 clase por semana</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end space-x-2 border-t border-slate-100">
+        <button id="btn-cancel-course" class="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded font-medium">Cancelar</button>
+        <button id="btn-save-course" class="px-4 py-1.5 text-xs font-bold rounded bg-[#CC142E] hover:bg-[#B50D30] text-white transition">Guardar Curso</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-auth" class="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md p-6 space-y-4 mx-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <img src="assets/utp-class-logo.svg" alt="UTP" class="h-4 w-auto">
+          <span class="text-xs font-semibold text-slate-700">Acceso Docente</span>
+        </div>
+        <button id="btn-close-auth-modal" class="text-slate-400 hover:text-slate-700 p-0.5 leading-none transition" title="Cerrar">
+          <span class="material-symbols-outlined text-base leading-none">close</span>
+        </button>
+      </div>
+
+      <div class="flex border-b border-slate-200 text-xs">
+        <button id="tab-btn-login" type="button" class="flex-1 py-2 text-center border-b-2 border-[#CC142E] text-[#CC142E] font-bold transition">
+          Iniciar Sesión
+        </button>
+        <button id="tab-btn-register" type="button" class="flex-1 py-2 text-center border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition">
+          Crear Cuenta Docente
+        </button>
+      </div>
+
+      <form id="form-login" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Correo Institucional / Personal:</label>
+          <input type="email" id="input-login-email" required placeholder="profesor@utp.edu.pe" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Contraseña:</label>
+          <input type="password" id="input-login-password" required placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+        <div class="pt-2">
+          <button type="submit" id="btn-submit-login" class="w-full py-2 text-xs font-bold rounded bg-[#CC142E] hover:bg-[#B50D30] text-white transition flex items-center justify-center gap-1.5 shadow-2xs">
+            <span class="material-symbols-outlined text-sm">login</span>
+            <span>Iniciar Sesión</span>
+          </button>
+        </div>
+      </form>
+
+      <form id="form-register" class="space-y-3 text-xs hidden">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nombre Completo y Título:</label>
+          <input type="text" id="input-reg-nombre" required placeholder="Ej: Mg. Carlos Mendoza" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Correo Electrónico:</label>
+          <input type="email" id="input-reg-email" required placeholder="carlos.mendoza@utp.edu.pe" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Contraseña (mínimo 6 caracteres):</label>
+          <input type="password" id="input-reg-password" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+        <div class="pt-2">
+          <button type="submit" id="btn-submit-register" class="w-full py-2 text-xs font-bold rounded bg-[#00A88E] hover:bg-[#008f79] text-white transition flex items-center justify-center gap-1.5 shadow-2xs">
+            <span class="material-symbols-outlined text-sm">person_add</span>
+            <span>Crear Cuenta e Ingresar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-profile" class="fixed inset-0 bg-slate-900/50 backdrop-blur-2xs z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md p-6 space-y-4 mx-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-lg text-[#CC142E]">manage_accounts</span>
+          <span>Mi Perfil Docente</span>
+        </h3>
+        <button id="btn-close-profile-modal" class="text-slate-400 hover:text-slate-700 p-0.5 leading-none transition" title="Cerrar">
+          <span class="material-symbols-outlined text-base leading-none">close</span>
+        </button>
+      </div>
+
+      <form id="form-profile" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Correo Electrónico (Identificador):</label>
+          <input type="email" id="profile-email" disabled class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded text-xs text-slate-500 cursor-not-allowed">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Nombre Completo y Grado:</label>
+          <input type="text" id="profile-nombre" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none focus:border-slate-400">
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 space-y-2">
+          <p class="font-semibold text-slate-700">Cambiar Contraseña (Opcional):</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-0.5">Contraseña Actual:</label>
+              <input type="password" id="profile-pwd-actual" placeholder="••••••••" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-500 mb-0.5">Nueva Contraseña:</label>
+              <input type="password" id="profile-pwd-nuevo" placeholder="••••••••" class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 flex items-center justify-end space-x-2 border-t border-slate-100">
+          <button type="submit" id="btn-save-profile" class="px-4 py-2 text-xs font-bold rounded bg-[#CC142E] hover:bg-[#B50D30] text-white transition flex items-center gap-1.5 shadow-2xs">
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+  <div id="custom-dialog-container" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-200"></div>
+
+  <footer class="bg-white border-t border-slate-200 py-3.5 mt-auto text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+      <div class="flex items-center space-x-2">
+        <span class="font-bold text-slate-800">UTP+class</span>
+        <span class="text-slate-300">·</span>
+        <span class="text-slate-600">Sistema de Alerta Temprana en Docencia Universitaria</span>
+      </div>
+      <div class="text-[11px] text-slate-400">
+        <span>© 2026 Universidad Tecnológica del Perú. Todos los derechos reservados.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/main.js?v=2.6"></script>
+</body>
+</html>
