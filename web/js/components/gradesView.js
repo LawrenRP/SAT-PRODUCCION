@@ -223,21 +223,6 @@ export function renderUnitAndWeekSelectors() {
 
     subweekContainer.appendChild(btn);
   });
-
-  const btnUnitAll = document.createElement('button');
-  const isUnitAll = AppState.activeGradeWeek === `unit_${currentUnit.id}`;
-  btnUnitAll.className = isUnitAll
-    ? 'px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-900 font-bold'
-    : 'px-2 py-0.5 rounded text-xs text-slate-500 hover:text-slate-800';
-  btnUnitAll.textContent = 'Ver todo';
-  btnUnitAll.title = `Ver todas las semanas agrupadas de ${currentUnit.name}`;
-
-  btnUnitAll.addEventListener('click', () => {
-    AppState.activeGradeWeek = `unit_${currentUnit.id}`;
-    renderUnitAndWeekSelectors();
-    renderGradesTable();
-  });
-  subweekContainer.appendChild(btnUnitAll);
 }
 
 export function renderGradesTable() {
